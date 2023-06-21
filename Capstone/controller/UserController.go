@@ -4,11 +4,7 @@ import (
 	"Capstone/database"
 	"Capstone/midleware"
 	"Capstone/models"
-	"io/ioutil"
-	"mime"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/labstack/echo/v4"
@@ -48,6 +44,12 @@ func UpdateUserController(c echo.Context) error {
 
 	if err := c.Bind(&users); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request payload")
+	}
+	if err := c.Validate(users); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"messages": "error update user",
+			"error":    err.Error(),
+		})
 	}
 
 	if err := database.DB.Model(&users).Updates(users).Error; err != nil {
@@ -103,51 +105,52 @@ func LoginController(c echo.Context) error {
 	})
 
 }
-func GetImageHandler(c echo.Context) error {
-	// Dapatkan UUID gambar dari parameter permintaan
-	id, err := midleware.ClaimsId(c)
+
+func GetAllUserController(c echo.Context) error {
+	role, err := midleware.ClaimsRole(c)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	var users models.User
-	if err := database.DB.Select("photo").Where("id = ?", id).First(&users).Error; err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Database error")
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 
-	photo := users.Photo
+	if role != "User" {
+		return c.JSON(http.StatusUnauthorized, "Error Account")
+	}
 
-	// Construct the file path based on the UUID string
-	filePath := filepath.Join("uploads", photo) // Folder "uploads" berada dalam direktori saat ini
-
-	// Dapatkan tipe MIME file
-	file, err := os.Open(filePath)
+	var users []models.User
+	err = database.DB.Find(&users).Error
 	if err != nil {
-		return c.String(http.StatusNotFound, "File not found")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve users from the database")
 	}
-	defer file.Close()
-
-	// Baca awal file untuk mendapatkan tipe MIME
-	buffer := make([]byte, 512) // Membaca 512 byte pertama
-	_, err = file.Read(buffer)
+	allUsers := make([]models.AllUserSearch, len(users))
+	for i, user := range users {
+		allUsers[i] = models.ConvertAllUserSearch(&user)
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Success: Retrieved all users",
+		"users":   allUsers,
+	})
+}
+func GetAllThreadUserController(c echo.Context) error {
+	role, err := midleware.ClaimsRole(c)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Internal server error")
+		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 	}
 
-	// Deteksi tipe MIME
-	mimeType := mime.TypeByExtension(filepath.Ext(filePath))
-	if mimeType == "" {
-		mimeType = http.DetectContentType(buffer)
+	if role != "User" {
+		return c.JSON(http.StatusUnauthorized, "Error Account")
 	}
+	thread, err := database.GetThreads(c.Request().Context())
 
-	// Set header Content-Type pada response
-	c.Response().Header().Set("Content-Type", mimeType)
-
-	// Baca file dengan ekstensi yang tepat
-	imageBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Internal server error")
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	allThreads := make([]models.AllThread, len(thread))
+	for i, thread := range thread {
+		allThreads[i] = models.ConverThreadToAllThread(&thread)
 	}
 
-	// Kirim data gambar sebagai response
-	return c.Blob(http.StatusOK, mimeType, imageBytes)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Success: Retrieved all threads",
+		"data":    allThreads,
+	})
 }

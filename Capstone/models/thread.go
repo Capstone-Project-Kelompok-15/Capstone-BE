@@ -6,44 +6,41 @@ import (
 
 type Thread struct {
 	gorm.Model
-	Title          string    `json:"title" form:"title"`
-	Topic          string    `json:"topic" form:"topic"`
-	Content        string    `json:"content" form:"content"`
+	Title          string    `json:"title" form:"title" validate:"required"`
+	Content        string    `json:"content" form:"content" validate:"required"`
 	File           string    `json:"file" form:"file"`
-	UserID         int       `json:"user_id" form:"user_id"`
+	UserID         int       `json:"user_id" form:"user_id" validate:"required"`
 	User           User      `json:"user"`
-	Follows        []Follow  `json:"follow"`
 	Comments       []Comment `json:"comment"`
 	BookmarkedUser []User    `gorm:"many2many: thread_user_assoc"`
 	Like           []Like    `json:"like"`
 }
 type AllThread struct {
 	ID      uint    `gorm:"primary_key"`
-	Title   string  `json:"title" form:"title"`
-	Topic   string  `json:"topic" form:"topic"`
-	Content string  `json:"content" form:"content"`
+	Title   string  `json:"title" form:"title" validate:"required"`
+	Content string  `json:"content" form:"content" validate:"required"`
 	File    string  `json:"file" form:"file"`
-	UserID  int     `json:"user_id" form:"user_id"`
+	UserID  int     `json:"user_id" form:"user_id" validate:"required"`
 	User    AllUser `json:"user"`
 }
 type ThreadUser struct {
-	ID    uint   `gorm:"primary_key"`
-	Title string `json:"title" form:"title"`
-	Topic string `json:"topic" form:"topic"`
+	ID      uint   `gorm:"primary_key"`
+	Title   string `json:"title" form:"title"`
+	Content string `json:"content" form:"content"`
 }
 
 func ConvertThreadUser(thread *Thread) ThreadUser {
 	return ThreadUser{
-		ID:    thread.ID,
-		Title: thread.Title,
-		Topic: thread.Topic,
+		ID:      thread.ID,
+		Title:   thread.Title,
+		Content: thread.Content,
 	}
 }
 
 type ThreadResponse struct {
 	ID       uint              `gorm:"primary_key"`
 	Title    string            `json:"title" form:"title"`
-	Topic    string            `json:"topic" form:"topic"`
+	Content  string            `json:"content" form:"content"`
 	Comments []CommentResponse `json:"comments"`
 }
 
@@ -56,7 +53,7 @@ func ConvertThreadToThreadResponse(thread *Thread) ThreadResponse {
 	return ThreadResponse{
 		ID:       thread.ID,
 		Title:    thread.Title,
-		Topic:    thread.Topic,
+		Content:  thread.Content,
 		Comments: comments,
 	}
 }
@@ -65,7 +62,6 @@ func ConverThreadToAllThread(thread *Thread) AllThread {
 	return AllThread{
 		ID:      thread.ID,
 		Title:   thread.Title,
-		Topic:   thread.Topic,
 		Content: thread.Content,
 		File:    thread.File,
 		UserID:  thread.UserID,

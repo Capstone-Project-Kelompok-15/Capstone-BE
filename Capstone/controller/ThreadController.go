@@ -70,6 +70,14 @@ func GetThreadControllerByTitle(c echo.Context) error {
 }
 
 func CreateThreadsController(c echo.Context) error {
+	Allthread := models.AllThread{}
+	c.Bind(&Allthread)
+	if err := c.Validate(Allthread); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"messages": "error create thread",
+			"error":    err.Error(),
+		})
+	}
 	thread := models.Thread{}
 	c.Bind(&thread)
 	id, err := midleware.ClaimsId(c)
@@ -132,7 +140,6 @@ func UpdateThreadsControllerAdmin(c echo.Context) error {
 
 	thread := models.Thread{}
 	c.Bind(&thread)
-
 	updateThread, err := database.UpdateThreads(c.Request().Context(), id, thread)
 	if err != nil {
 		if err == database.ErrInvalidID {
@@ -192,7 +199,6 @@ func UpdateThreadsControllerUser(c echo.Context) error {
 
 	thread := models.Thread{}
 	c.Bind(&thread)
-
 	updateThread, err := database.UpdateThreads(c.Request().Context(), Id, thread)
 	if err != nil {
 		if err == database.ErrInvalidID {
