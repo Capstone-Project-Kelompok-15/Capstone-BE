@@ -62,7 +62,12 @@ func GetThreadControllerByTitle(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-
+	if len(thread) == 0 {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Record not found",
+			"thread":  thread,
+		})
+	}
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Successfully retrieved thread by title",
 		"thread":  thread,
@@ -79,12 +84,25 @@ func CreateThreadsController(c echo.Context) error {
 		})
 	}
 	thread := models.Thread{}
-	c.Bind(&thread)
 	id, err := midleware.ClaimsId(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+	mutes, err := database.GetMute(c.Request().Context())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	isMutedOrBlocked, message := midleware.CheckBlockStatus(mutes, id)
+	if isMutedOrBlocked {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": message,
+		})
+	}
 	thread.UserID = int(id)
+	thread.Title = Allthread.Title
+	thread.Content = Allthread.Content
+	thread.File = Allthread.File
 	newThread, err := database.CreateThreads(c.Request().Context(), thread)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
@@ -190,15 +208,25 @@ func UpdateThreadsControllerUser(c echo.Context) error {
 	}
 	var users models.User
 	if err := database.DB.Where("id = ?", id).First(&users).Error; err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "Database error")
 	}
 	Id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-
+	Allthread := models.AllThread{}
+	c.Bind(&Allthread)
+	if err := c.Validate(Allthread); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"messages": "error create thread",
+			"error":    err.Error(),
+		})
+	}
 	thread := models.Thread{}
-	c.Bind(&thread)
+	thread.UserID = int(id)
+	thread.Title = Allthread.Title
+	thread.Content = Allthread.Content
+	thread.File = Allthread.File
 	updateThread, err := database.UpdateThreads(c.Request().Context(), Id, thread)
 	if err != nil {
 		if err == database.ErrInvalidID {

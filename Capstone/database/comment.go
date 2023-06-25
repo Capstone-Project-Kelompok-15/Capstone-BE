@@ -12,7 +12,7 @@ func CreateComment(ctx context.Context, Comment models.Comment) (models.Comment,
 	}
 
 	// Preload user data for the created Comment
-	err = DB.WithContext(ctx).Preload("Thread").First(&Comment).Error
+	err = DB.WithContext(ctx).Preload("User").Preload("Thread").First(&Comment).Error
 	if err != nil {
 		return models.Comment{}, err
 	}
@@ -53,11 +53,11 @@ func UpdateComments(ctx context.Context, userID int, id int, Comment models.Comm
 	return Comment, nil
 }
 
-func GetComments(ctx context.Context) ([]models.Comment, error) {
+func GetComments(ctx context.Context, id int) ([]models.Comment, error) {
 
 	var comment []models.Comment
 
-	err := DB.WithContext(ctx).Preload("User").Preload("Thread").Find(&comment).Error
+	err := DB.WithContext(ctx).Preload("User").Preload("Thread").Where("thread_id = ?", id).Find(&comment).Error
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func GetComments(ctx context.Context) ([]models.Comment, error) {
 func GetCommentID(ctx context.Context, id int) (models.Comment, error) {
 	var comment models.Comment
 
-	err := DB.WithContext(ctx).Preload("User").Preload("Thread").Where("id = ?", id).First(&comment).Error
+	err := DB.WithContext(ctx).Preload("User").Preload("Thread").Where("id = ?", id).Find(&comment).Error
 	if err != nil {
 		return models.Comment{}, err
 	}

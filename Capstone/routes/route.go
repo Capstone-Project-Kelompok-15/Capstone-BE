@@ -3,27 +3,16 @@ package routes
 import (
 	"Capstone/constant"
 	"Capstone/controller"
+	"Capstone/dto"
 	"Capstone/midleware"
-	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-type CustomValidator struct {
-	validator *validator.Validate
-}
-
-func (cv *CustomValidator) Validate(i interface{}) error {
-	if err := cv.validator.Struct(i); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	return nil
-}
-func New() *echo.Echo {
-	e := echo.New()
-	e.Validator = &CustomValidator{validator: validator.New()}
+func New(e *echo.Echo) {
+	e.Validator = dto.NewValidator(validator.New())
 	e.Use(middleware.CORS())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
@@ -40,6 +29,7 @@ func New() *echo.Echo {
 	eJwt := e.Group("")
 	eJwt.Use(middleware.JWT([]byte(constant.SECRET_JWT)))
 	eJwt.PUT("/admin/:id", controller.UpdateUserAdminController)
+	eJwt.PUT("/admin", controller.UpdateDataAdminController)
 	eJwt.DELETE("/admin/:id", controller.DeleteUserAdminController)
 	eJwt.GET("/admin", controller.GetUsersAdminController)
 	eJwt.GET("/admin/:id", controller.GetUserByidAdminController)
@@ -54,10 +44,10 @@ func New() *echo.Echo {
 	NewThreadControllers(eJwt)
 	NewBookmarkedContoller(bookmark)
 	Follow(eJwt)
+	Like(eJwt)
+	NewReportController(eJwt)
 	NewCommentControllers(eJwt)
-
-	e.Logger.Fatal(e.Start(":8000"))
-	return e
+	MuteBlock(eJwt)
 }
 
 func NewThreadControllers(e *echo.Group) {
@@ -65,11 +55,12 @@ func NewThreadControllers(e *echo.Group) {
 	e.GET("/threads/:id", controller.GetThreadsIDController)
 	e.POST("/threads", controller.CreateThreadsController)
 	e.DELETE("/admin/threads/:id", controller.DeleteThreadsControllerAdmin)
-	e.DELETE("/threads/:id", controller.DeleteThreadsControllerAdmin)
+	e.DELETE("/threads/:id", controller.DeleteCommentsControllerUser)
 	e.PUT("/admin/threads/:id", controller.UpdateThreadsControllerAdmin)
-	e.PUT("/threads/:id", controller.UpdateThreadsControllerAdmin)
+	e.PUT("/threads/:id", controller.UpdateThreadsControllerUser)
 	e.GET("/threads", controller.GetThreadControllerByTitle)
 	e.GET("/Allthreads", controller.GetAllThreadUserController)
+
 }
 
 func NewBookmarkedContoller(e *echo.Group) {
@@ -82,14 +73,28 @@ func NewCommentControllers(e *echo.Group) {
 	e.DELETE("/comment/:id", controller.DeleteCommentsControllerUser)
 	e.PUT("/comment/:id", controller.UpdateCommentsControllerUser)
 	e.GET("/comment/:id", controller.GetCommentIDController)
-	e.GET("/comment", controller.GetCommentController)
+	e.GET("/thread/:id/comment", controller.GetCommentController)
 }
 func Follow(e *echo.Group) {
 	e.POST("/follow", controller.CreateFollowController)
 	e.DELETE("/follow/:id", controller.DeleteFollowsControllerUser)
+	e.GET("/follow", controller.GetFollowIDController)
 }
 func Like(e *echo.Group) {
 	e.POST("/like", controller.CreateLikeController)
 	e.DELETE("/like/:id", controller.DeleteLikeController)
 	e.GET("/like", controller.GetLikeController)
+}
+func NewReportController(e *echo.Group) {
+	e.POST("/report", controller.CreateReportController)
+	e.DELETE("/report/:id", controller.DeleteReportController)
+	e.GET("/report", controller.GetReportsController)
+	e.GET("/report/:id", controller.GetReportByIdController)
+}
+
+func MuteBlock(e *echo.Group) {
+	e.POST("/Mute", controller.CreateMuteController)
+	e.DELETE("/Mute/:id", controller.DeleteMutesControllerUser)
+	e.POST("/Block", controller.CreateBlockController)
+	e.DELETE("/Block/:id", controller.DeleteBlockControllerUser)
 }

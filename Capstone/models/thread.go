@@ -9,18 +9,19 @@ type Thread struct {
 	Title          string    `json:"title" form:"title" validate:"required"`
 	Content        string    `json:"content" form:"content" validate:"required"`
 	File           string    `json:"file" form:"file"`
-	UserID         int       `json:"user_id" form:"user_id" validate:"required"`
+	UserID         int       `json:"user_id" form:"user_id"`
 	User           User      `json:"user"`
 	Comments       []Comment `json:"comment"`
 	BookmarkedUser []User    `gorm:"many2many: thread_user_assoc"`
 	Like           []Like    `json:"like"`
 }
 type AllThread struct {
+	gorm.Model
 	ID      uint    `gorm:"primary_key"`
 	Title   string  `json:"title" form:"title" validate:"required"`
 	Content string  `json:"content" form:"content" validate:"required"`
 	File    string  `json:"file" form:"file"`
-	UserID  int     `json:"user_id" form:"user_id" validate:"required"`
+	UserID  int     `json:"user_id" form:"user_id"`
 	User    AllUser `json:"user"`
 }
 type ThreadUser struct {
@@ -60,6 +61,7 @@ func ConvertThreadToThreadResponse(thread *Thread) ThreadResponse {
 func ConverThreadToAllThread(thread *Thread) AllThread {
 
 	return AllThread{
+		Model:   gorm.Model{CreatedAt: thread.CreatedAt},
 		ID:      thread.ID,
 		Title:   thread.Title,
 		Content: thread.Content,

@@ -51,7 +51,7 @@ func UpdateUserController(c echo.Context) error {
 			"error":    err.Error(),
 		})
 	}
-
+	users.Role = "User"
 	if err := database.DB.Model(&users).Updates(users).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Database error")
 	}
@@ -97,7 +97,7 @@ func LoginController(c echo.Context) error {
 			"error":   err.Error(),
 		})
 	}
-	usersResponse := models.UserResponse{int(user.ID), user.Username, user.Email, token}
+	usersResponse := models.UserResponse{ID: int(user.ID), Name: user.Username, Email: user.Email, Token: token}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "success Login",
